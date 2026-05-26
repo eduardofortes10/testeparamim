@@ -60,6 +60,10 @@
         cursor: pointer;
       }
 
+      #clear {
+        background: #334155;
+      }
+
       #status {
         min-height: 18px;
         margin-top: 10px;
@@ -90,9 +94,11 @@
       <p>Selecione uma questão, código ou erro e receba apenas a resposta.</p>
 
       <label for="apiKey">Chave do Gemini</label>
-      <input id="apiKey" type="password" autocomplete="off" placeholder="AIza...">
+      <input id="apiKey" type="password" autocomplete="off" placeholder="Cole a nova chave aqui">
 
-      <button id="save" type="button">Salvar chave</button>
+      <button id="save" type="button">Salvar / trocar chave</button>
+      <button id="test" type="button">Testar chave</button>
+      <button id="clear" type="button">Limpar chave salva</button>
       <div id="status" role="status"></div>
 
       <div class="modes" aria-label="Modos disponíveis">

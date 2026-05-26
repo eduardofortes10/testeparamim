@@ -119,7 +119,8 @@ async function injetarPainel(tabId) {
 }
 
 async function gerarResposta(selection, mode) {
-  const { geminiKey } = await chrome.storage.local.get(["geminiKey"]);
+  const storage = await chrome.storage.local.get(["geminiKey"]);
+  const geminiKey = String(storage.geminiKey || "").replace(/\s/g, "");
 
   if (!geminiKey) {
     throw new Error("Chave do Gemini não encontrada.");
@@ -149,6 +150,10 @@ async function gerarComFallback(geminiKey, prompt) {
         }
       }
 
+      if (ehErroDeQuota(ultimoErro)) {
+        throw ultimoErro;
+      }
+
       if (!podeTentarOutroModelo(ultimoErro)) {
         throw ultimoErro;
       }
@@ -163,7 +168,7 @@ async function gerarComFallback(geminiKey, prompt) {
 
 async function chamarGemini(geminiKey, model, prompt) {
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`,
     {
       method: "POST",
       headers: {
@@ -220,8 +225,7 @@ function podeTentarOutroModelo(error) {
     message.includes("high demand") ||
     message.includes("overloaded") ||
     message.includes("unavailable") ||
-    message.includes("503") ||
-    message.includes("429")
+    message.includes("503")
   );
 }
 
@@ -232,6 +236,10 @@ function criarMensagemErro(error) {
 
   if (ehErroDeQuota(error)) {
     return "Limite gratuito do Gemini atingido. Aguarde alguns segundos e tente novamente, ou use outra chave do Gemini.";
+  }
+
+  if (ehErroDeChaveInvalida(error)) {
+    return "Chave do Gemini inválida ou não encontrada. Abra o ícone da extensão, limpe a chave salva e cole uma chave nova válida.";
   }
 
   return `Não foi possível gerar a resposta.\n\n${error.message}`;
@@ -246,6 +254,19 @@ function ehErroDeQuota(error) {
     message.includes("quota exceeded") ||
     message.includes("rate-limit") ||
     message.includes("resource_exhausted")
+  );
+}
+
+function ehErroDeChaveInvalida(error) {
+  const message = error.message.toLowerCase();
+
+  return (
+    error.httpStatus === 400 &&
+    (
+      message.includes("api key not found") ||
+      message.includes("valid api key") ||
+      message.includes("invalid_argument")
+    )
   );
 }
 
