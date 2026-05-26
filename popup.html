@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CodeMentor AI</title>
+    <style>
+      body {
+        width: 340px;
+        margin: 0;
+        background: #0f172a;
+        color: #e5e7eb;
+        font-family: Arial, sans-serif;
+      }
+
+      main {
+        padding: 18px;
+      }
+
+      h1 {
+        margin: 0 0 6px;
+        color: #f8fafc;
+        font-size: 20px;
+      }
+
+      p {
+        margin: 0 0 16px;
+        color: #cbd5e1;
+        line-height: 1.5;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        color: #bfdbfe;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      input {
+        box-sizing: border-box;
+        width: 100%;
+        padding: 11px;
+        border: 1px solid #334155;
+        border-radius: 6px;
+        background: #020617;
+        color: #f8fafc;
+        font-size: 14px;
+      }
+
+      button {
+        width: 100%;
+        margin-top: 12px;
+        padding: 10px 12px;
+        border: 0;
+        border-radius: 6px;
+        background: #2563eb;
+        color: #ffffff;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      #status {
+        min-height: 18px;
+        margin-top: 10px;
+        color: #86efac;
+        font-size: 13px;
+      }
+
+      .modes {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 16px;
+      }
+
+      .modes span {
+        padding: 8px;
+        border: 1px solid #334155;
+        border-radius: 6px;
+        background: #111827;
+        color: #dbeafe;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>CodeMentor AI</h1>
+      <p>Selecione uma questão, código ou erro e receba apenas a resposta.</p>
+
+      <label for="apiKey">Chave do Gemini</label>
+      <input id="apiKey" type="password" autocomplete="off" placeholder="AIza...">
+
+      <button id="save" type="button">Salvar chave</button>
+      <div id="status" role="status"></div>
+
+      <div class="modes" aria-label="Modos disponíveis">
+        <span>Resposta direta</span>
+        <span>Alternativa correta</span>
+        <span>Código completo</span>
+        <span>Correção curta</span>
+      </div>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
