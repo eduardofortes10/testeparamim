@@ -1,4 +1,8 @@
-const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODELS = [
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+  "gemini-2.0-flash-lite"
+];
 
 const MODES = {
   explain_code: {
@@ -93,8 +97,25 @@ async function enviarParaAba(tabId, mensagem) {
   try {
     await chrome.tabs.sendMessage(tabId, mensagem);
   } catch (error) {
-    console.warn("Não foi possível mostrar o painel nesta página.", error);
+    try {
+      await injetarPainel(tabId);
+      await chrome.tabs.sendMessage(tabId, mensagem);
+    } catch (injectionError) {
+      console.warn("Não foi possível mostrar o painel nesta página.", injectionError);
+    }
   }
+}
+
+async function injetarPainel(tabId) {
+  await chrome.scripting.insertCSS({
+    target: { tabId },
+    files: ["style.css"]
+  });
+
+  await chrome.scripting.executeScript({
+    target: { tabId },
+    files: ["content.js"]
+  });
 }
 
 async function gerarResposta(selection, mode) {
@@ -106,8 +127,43 @@ async function gerarResposta(selection, mode) {
 
   const prompt = criarPrompt(selection, mode);
 
+  return gerarComFallback(geminiKey, prompt);
+}
+
+async function gerarComFallback(geminiKey, prompt) {
+  let ultimoErro = null;
+
+  for (const model of GEMINI_MODELS) {
+    try {
+      return await chamarGemini(geminiKey, model, prompt);
+    } catch (error) {
+      ultimoErro = error;
+
+      if (error.retryDelayMs && !error.message.includes("limit: 0")) {
+        await esperar(error.retryDelayMs);
+
+        try {
+          return await chamarGemini(geminiKey, model, prompt);
+        } catch (retryError) {
+          ultimoErro = retryError;
+        }
+      }
+
+      if (!podeTentarOutroModelo(ultimoErro)) {
+        throw ultimoErro;
+      }
+    }
+  }
+
+  throw new Error(
+    ultimoErro?.message ||
+    "Todos os modelos do Gemini estão indisponíveis no momento."
+  );
+}
+
+async function chamarGemini(geminiKey, model, prompt) {
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
     {
       method: "POST",
       headers: {
@@ -126,7 +182,13 @@ async function gerarResposta(selection, mode) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.error?.message || "Erro na API do Gemini");
+    const message = data.error?.message || "Erro na API do Gemini";
+    const status = data.error?.status || "";
+    const error = new Error(`${message} [${response.status} ${status}]`);
+    error.httpStatus = response.status;
+    error.apiStatus = status;
+    error.retryDelayMs = obterRetryDelayMs(data, message);
+    throw error;
   }
 
   return (
@@ -135,12 +197,56 @@ async function gerarResposta(selection, mode) {
   );
 }
 
+function obterRetryDelayMs(data, message) {
+  const retryInfo = data.error?.details?.find((detail) => detail.retryDelay);
+  const retryDelay = retryInfo?.retryDelay;
+
+  if (retryDelay) {
+    return Math.ceil(Number.parseFloat(retryDelay) * 1000);
+  }
+
+  const match = message.match(/retry in ([\d.]+)s/i);
+  return match ? Math.ceil(Number.parseFloat(match[1]) * 1000) : 0;
+}
+
+function esperar(ms) {
+  return new Promise((resolve) => setTimeout(resolve, Math.min(ms, 12000)));
+}
+
+function podeTentarOutroModelo(error) {
+  const message = error.message.toLowerCase();
+
+  return (
+    message.includes("high demand") ||
+    message.includes("overloaded") ||
+    message.includes("unavailable") ||
+    message.includes("503") ||
+    message.includes("429")
+  );
+}
+
 function criarMensagemErro(error) {
   if (error.message === "Chave do Gemini não encontrada.") {
     return "Chave do Gemini não encontrada.\n\nClique no ícone da extensão CodeMentor AI e salve sua chave para começar.";
   }
 
+  if (ehErroDeQuota(error)) {
+    return "Limite gratuito do Gemini atingido. Aguarde alguns segundos e tente novamente, ou use outra chave do Gemini.";
+  }
+
   return `Não foi possível gerar a resposta.\n\n${error.message}`;
+}
+
+function ehErroDeQuota(error) {
+  const message = error.message.toLowerCase();
+
+  return (
+    error.httpStatus === 429 ||
+    error.apiStatus === "RESOURCE_EXHAUSTED" ||
+    message.includes("quota exceeded") ||
+    message.includes("rate-limit") ||
+    message.includes("resource_exhausted")
+  );
 }
 
 function criarPrompt(selection, mode) {

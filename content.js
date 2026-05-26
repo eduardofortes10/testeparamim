@@ -1,4 +1,7 @@
 let ultimoContexto = null;
+let painelMinimizado = false;
+let painelPosicao = null;
+let arrasteAtual = null;
 
 chrome.runtime.onMessage.addListener((message) => {
   if (message.type === "SHOW_LOADING") {
@@ -33,70 +36,114 @@ function criarPainel({ title, heading, selection, answer, loading }) {
     document.body.appendChild(painel);
   }
 
+  painel.classList.toggle("is-minimized", painelMinimizado);
+
+  if (painelPosicao) {
+    painel.style.left = `${painelPosicao.left}px`;
+    painel.style.top = `${painelPosicao.top}px`;
+    painel.style.right = "auto";
+  }
+
   painel.innerHTML = `
     <div class="cm-header">
       <div>
         <strong>CodeMentor AI</strong>
-        <span>${escapeHTML(title || "Assistente")}</span>
+        <span>${escapeHTML(title || "Resposta")}</span>
       </div>
-      <button id="cm-close" type="button" aria-label="Fechar">×</button>
+      <div class="cm-window-actions">
+        <button id="cm-minimize" type="button" aria-label="${painelMinimizado ? "Restaurar" : "Minimizar"}">${painelMinimizado ? "□" : "−"}</button>
+        <button id="cm-close" type="button" aria-label="Fechar">×</button>
+      </div>
     </div>
 
-    <div class="cm-toolbar">
-      <button type="button" data-mode="explain_code">Responder</button>
-      <button type="button" data-mode="solve_exercise">Resolver</button>
-      <button type="button" data-mode="explain_error">Corrigir</button>
-      <button type="button" data-mode="improve_code">Código</button>
+    <div class="cm-body">
+      <section class="cm-section">
+        <h3>Selecionado</h3>
+        <pre class="cm-selection"><code>${escapeHTML(selection || "")}</code></pre>
+      </section>
+
+      <section class="cm-section">
+        <h3>${escapeHTML(heading || "Resposta")}</h3>
+        <div class="cm-answer ${loading ? "is-loading" : ""}">
+          ${renderMarkdown(answer || "")}
+        </div>
+      </section>
     </div>
-
-    <section class="cm-section">
-      <h3>Selecionado</h3>
-      <pre class="cm-selection"><code>${escapeHTML(selection || "")}</code></pre>
-    </section>
-
-    <section class="cm-section">
-      <h3>${escapeHTML(heading || "Resposta")}</h3>
-      <div class="cm-answer ${loading ? "is-loading" : ""}">
-        ${renderMarkdown(answer || "")}
-      </div>
-    </section>
   `;
 
   document.getElementById("cm-close").onclick = () => painel.remove();
+  document.getElementById("cm-minimize").onclick = () => {
+    painelMinimizado = !painelMinimizado;
+    painel.classList.toggle("is-minimized", painelMinimizado);
+    document.getElementById("cm-minimize").textContent = painelMinimizado ? "□" : "−";
+    document.getElementById("cm-minimize").setAttribute("aria-label", painelMinimizado ? "Restaurar" : "Minimizar");
+    manterPainelNaTela(painel);
+  };
 
-  painel.querySelectorAll("[data-mode]").forEach((button) => {
-    button.addEventListener("click", () => executarModo(button.dataset.mode));
-  });
+  ativarArraste(painel);
 
-  if (window.CodeMentorPrism) {
-    window.CodeMentorPrism.highlightAll(painel);
-  }
 }
 
-async function executarModo(mode) {
-  if (!ultimoContexto?.selection) return;
+function ativarArraste(painel) {
+  const header = painel.querySelector(".cm-header");
 
-  criarPainel({
-    title: "Gerando resposta",
-    heading: "Resposta",
-    selection: ultimoContexto.selection,
-    answer: "Gerando nova resposta...",
-    loading: true
+  header.addEventListener("pointerdown", (event) => {
+    if (event.target.closest("button")) return;
+
+    const rect = painel.getBoundingClientRect();
+    arrasteAtual = {
+      painel,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top
+    };
+
+    painel.style.left = `${rect.left}px`;
+    painel.style.top = `${rect.top}px`;
+    painel.style.right = "auto";
+    painel.classList.add("is-dragging");
+    document.body.classList.add("cm-dragging-window");
+    event.preventDefault();
   });
 
-  const response = await chrome.runtime.sendMessage({
-    type: "RUN_MODE",
-    mode,
-    selection: ultimoContexto.selection
+  header.addEventListener("dblclick", (event) => {
+    if (event.target.closest("button")) return;
+    document.getElementById("cm-minimize").click();
   });
+}
 
-  criarPainel({
-    title: response.ok ? "Resposta gerada" : "Erro",
-    heading: response.ok ? "Resposta" : "Erro",
-    selection: ultimoContexto.selection,
-    answer: response.ok ? response.answer : response.error,
-    loading: false
-  });
+document.addEventListener("pointermove", (event) => {
+  if (!arrasteAtual) return;
+
+  const { painel, offsetX, offsetY } = arrasteAtual;
+  moverPainel(painel, event.clientX - offsetX, event.clientY - offsetY);
+});
+
+document.addEventListener("pointerup", () => {
+  if (!arrasteAtual) return;
+
+  arrasteAtual.painel.classList.remove("is-dragging");
+  document.body.classList.remove("cm-dragging-window");
+  arrasteAtual = null;
+});
+
+function moverPainel(painel, left, top) {
+  const limite = 8;
+  const maxLeft = Math.max(limite, window.innerWidth - painel.offsetWidth - limite);
+  const maxTop = Math.max(limite, window.innerHeight - painel.offsetHeight - limite);
+
+  painelPosicao = {
+    left: Math.max(limite, Math.min(left, maxLeft)),
+    top: Math.max(limite, Math.min(top, maxTop))
+  };
+
+  painel.style.left = `${painelPosicao.left}px`;
+  painel.style.top = `${painelPosicao.top}px`;
+  painel.style.right = "auto";
+}
+
+function manterPainelNaTela(painel) {
+  const rect = painel.getBoundingClientRect();
+  moverPainel(painel, rect.left, rect.top);
 }
 
 function renderMarkdown(text) {
@@ -117,17 +164,13 @@ function renderMarkdown(text) {
 }
 
 function formatText(text) {
-  return escapeHTML(text)
-    .replace(/^### (.*)$/gm, "<h4>$1</h4>")
-    .replace(/^## (.*)$/gm, "<h4>$1</h4>")
-    .replace(/^# (.*)$/gm, "<h4>$1</h4>")
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-    .replace(/^\- (.*)$/gm, "<li>$1</li>")
-    .replace(/(<li>.*<\/li>)/gs, "<ul>$1</ul>")
-    .replace(/\n{2,}/g, "</p><p>")
-    .replace(/\n/g, "<br>")
-    .replace(/^(.+)$/s, "<p>$1</p>")
-    .replace(/<p><\/p>/g, "");
+  const cleanText = escapeHTML(text).trim();
+
+  if (!cleanText) {
+    return "";
+  }
+
+  return `<p>${cleanText.replace(/\n/g, "<br>")}</p>`;
 }
 
 function escapeHTML(text) {
