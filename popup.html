@@ -6,7 +6,7 @@
     <title>CodeMentor AI</title>
     <style>
       body {
-        width: 340px;
+        width: 360px;
         margin: 0;
         background: #0f172a;
         color: #e5e7eb;
@@ -31,7 +31,7 @@
 
       label {
         display: block;
-        margin-bottom: 8px;
+        margin: 14px 0 8px;
         color: #bfdbfe;
         font-size: 13px;
         font-weight: 700;
@@ -50,7 +50,7 @@
 
       button {
         width: 100%;
-        margin-top: 12px;
+        margin-top: 10px;
         padding: 10px 12px;
         border: 0;
         border-radius: 6px;
@@ -60,8 +60,14 @@
         cursor: pointer;
       }
 
-      #clear {
+      .secondary {
         background: #334155;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
       }
 
       #status {
@@ -69,6 +75,7 @@
         margin-top: 10px;
         color: #86efac;
         font-size: 13px;
+        line-height: 1.4;
       }
 
       .modes {
@@ -91,14 +98,22 @@
   <body>
     <main>
       <h1>CodeMentor AI</h1>
-      <p>Selecione uma questão, código ou erro e receba apenas a resposta.</p>
+      <p>Gemini responde primeiro. Se falhar, Groq entra como reserva.</p>
 
-      <label for="apiKey">Chave do Gemini</label>
-      <input id="apiKey" type="password" autocomplete="off" placeholder="Cole a nova chave aqui">
+      <label for="geminiKey">Chave do Gemini</label>
+      <input id="geminiKey" type="password" autocomplete="off" placeholder="AIza...">
 
-      <button id="save" type="button">Salvar / trocar chave</button>
-      <button id="test" type="button">Testar chave</button>
-      <button id="clear" type="button">Limpar chave salva</button>
+      <label for="groqKey">Chave da Groq</label>
+      <input id="groqKey" type="password" autocomplete="off" placeholder="gsk_...">
+
+      <button id="save" type="button">Salvar chaves</button>
+
+      <div class="row">
+        <button id="testGemini" type="button" class="secondary">Testar Gemini</button>
+        <button id="testGroq" type="button" class="secondary">Testar Groq</button>
+      </div>
+
+      <button id="clear" type="button" class="secondary">Limpar chaves salvas</button>
       <div id="status" role="status"></div>
 
       <div class="modes" aria-label="Modos disponíveis">

@@ -3,6 +3,7 @@ const GEMINI_MODELS = [
   "gemini-2.0-flash",
   "gemini-2.0-flash-lite"
 ];
+const GROQ_MODEL = "llama-3.1-8b-instant";
 
 const MODES = {
   explain_code: {
@@ -119,16 +120,29 @@ async function injetarPainel(tabId) {
 }
 
 async function gerarResposta(selection, mode) {
-  const storage = await chrome.storage.local.get(["geminiKey"]);
+  const storage = await chrome.storage.local.get(["geminiKey", "groqKey"]);
   const geminiKey = String(storage.geminiKey || "").replace(/\s/g, "");
+  const groqKey = String(storage.groqKey || "").replace(/\s/g, "");
 
-  if (!geminiKey) {
-    throw new Error("Chave do Gemini não encontrada.");
+  if (!geminiKey && !groqKey) {
+    throw new Error("Nenhuma chave de API encontrada.");
   }
 
   const prompt = criarPrompt(selection, mode);
 
-  return gerarComFallback(geminiKey, prompt);
+  if (geminiKey) {
+    try {
+      return await gerarComFallback(geminiKey, prompt);
+    } catch (error) {
+      if (!groqKey) {
+        throw error;
+      }
+
+      console.warn("Gemini falhou. Tentando Groq como fallback.", error);
+    }
+  }
+
+  return chamarGroq(groqKey, prompt);
 }
 
 async function gerarComFallback(geminiKey, prompt) {
@@ -202,6 +216,42 @@ async function chamarGemini(geminiKey, model, prompt) {
   );
 }
 
+async function chamarGroq(groqKey, prompt) {
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${groqKey}`
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      messages: [
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      temperature: 0,
+      max_tokens: 1200
+    })
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const message = data.error?.message || "Erro na API da Groq";
+    const error = new Error(`${message} [Groq ${response.status}]`);
+    error.httpStatus = response.status;
+    error.provider = "groq";
+    throw error;
+  }
+
+  return (
+    data.choices?.[0]?.message?.content?.trim() ||
+    "Não consegui gerar uma resposta."
+  );
+}
+
 function obterRetryDelayMs(data, message) {
   const retryInfo = data.error?.details?.find((detail) => detail.retryDelay);
   const retryDelay = retryInfo?.retryDelay;
@@ -230,16 +280,24 @@ function podeTentarOutroModelo(error) {
 }
 
 function criarMensagemErro(error) {
+  if (error.message === "Nenhuma chave de API encontrada.") {
+    return "Nenhuma chave encontrada. Abra o ícone da extensão e salve uma chave do Gemini ou da Groq.";
+  }
+
   if (error.message === "Chave do Gemini não encontrada.") {
     return "Chave do Gemini não encontrada.\n\nClique no ícone da extensão CodeMentor AI e salve sua chave para começar.";
   }
 
   if (ehErroDeQuota(error)) {
-    return "Limite gratuito do Gemini atingido. Aguarde alguns segundos e tente novamente, ou use outra chave do Gemini.";
+    return error.provider === "groq"
+      ? "Limite gratuito da Groq atingido. Aguarde um pouco ou use Gemini como alternativa."
+      : "Limite gratuito do Gemini atingido. Aguarde alguns segundos ou use a Groq como alternativa.";
   }
 
   if (ehErroDeChaveInvalida(error)) {
-    return "Chave do Gemini inválida ou não encontrada. Abra o ícone da extensão, limpe a chave salva e cole uma chave nova válida.";
+    return error.provider === "groq"
+      ? "Chave da Groq inválida. Abra o ícone da extensão e cole uma chave válida da Groq."
+      : "Chave do Gemini inválida ou não encontrada. Abra o ícone da extensão, limpe a chave salva e cole uma chave nova válida.";
   }
 
   return `Não foi possível gerar a resposta.\n\n${error.message}`;
@@ -261,11 +319,13 @@ function ehErroDeChaveInvalida(error) {
   const message = error.message.toLowerCase();
 
   return (
-    error.httpStatus === 400 &&
+    (error.httpStatus === 400 || error.httpStatus === 401 || error.httpStatus === 403) &&
     (
       message.includes("api key not found") ||
       message.includes("valid api key") ||
-      message.includes("invalid_argument")
+      message.includes("invalid_argument") ||
+      message.includes("invalid api key") ||
+      message.includes("unauthorized")
     )
   );
 }

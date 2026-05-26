@@ -1,49 +1,42 @@
-const input = document.getElementById("apiKey");
+const geminiInput = document.getElementById("geminiKey");
+const groqInput = document.getElementById("groqKey");
 const status = document.getElementById("status");
 
-chrome.storage.local.get(["geminiKey"], ({ geminiKey }) => {
-  input.value = geminiKey || "";
-  status.textContent = geminiKey
-    ? `Chave salva: ${mascararChave(geminiKey)}`
-    : "Nenhuma chave salva.";
+chrome.storage.local.get(["geminiKey", "groqKey"], ({ geminiKey, groqKey }) => {
+  geminiInput.value = geminiKey || "";
+  groqInput.value = groqKey || "";
+  atualizarStatusSalvo(geminiKey, groqKey);
 });
 
 document.getElementById("save").addEventListener("click", async () => {
-  const key = normalizarChave(document.getElementById("apiKey").value);
-
-  if (!key) {
-    status.textContent = "Cole uma chave antes de salvar.";
-    status.style.color = "#fca5a5";
-    return;
-  }
+  const geminiKey = normalizarChave(geminiInput.value);
+  const groqKey = normalizarChave(groqInput.value);
 
   await chrome.storage.local.set({
-    geminiKey: key
+    geminiKey,
+    groqKey
   });
 
-  const { geminiKey } = await chrome.storage.local.get(["geminiKey"]);
-  status.textContent = `Nova chave salva: ${mascararChave(geminiKey)}`;
-  status.style.color = "#86efac";
+  atualizarStatusSalvo(geminiKey, groqKey, "Chaves salvas.");
 });
 
 document.getElementById("clear").addEventListener("click", async () => {
-  await chrome.storage.local.remove(["geminiKey"]);
-  input.value = "";
-  status.textContent = "Chave removida. Cole a nova chave e salve.";
+  await chrome.storage.local.remove(["geminiKey", "groqKey"]);
+  geminiInput.value = "";
+  groqInput.value = "";
+  status.textContent = "Chaves removidas.";
   status.style.color = "#fca5a5";
 });
 
-document.getElementById("test").addEventListener("click", async () => {
-  const key = normalizarChave(input.value);
+document.getElementById("testGemini").addEventListener("click", async () => {
+  const key = normalizarChave(geminiInput.value);
 
   if (!key) {
-    status.textContent = "Cole uma chave antes de testar.";
-    status.style.color = "#fca5a5";
+    mostrarStatus("Cole uma chave do Gemini antes de testar.", "#fca5a5");
     return;
   }
 
-  status.textContent = "Testando chave...";
-  status.style.color = "#bfdbfe";
+  mostrarStatus("Testando Gemini...", "#bfdbfe");
 
   try {
     const response = await fetch(
@@ -55,30 +48,83 @@ document.getElementById("test").addEventListener("click", async () => {
     const apiStatus = data.error?.status || "";
 
     if (response.ok) {
-      status.textContent = `Chave válida: ${mascararChave(key)}`;
-      status.style.color = "#86efac";
+      mostrarStatus(`Gemini válido: ${mascararChave(key)}`, "#86efac");
       return;
     }
 
     if (response.status === 429 || apiStatus === "RESOURCE_EXHAUSTED") {
-      status.textContent = "Chave válida, mas o limite de requisições foi atingido agora.";
-      status.style.color = "#fbbf24";
+      mostrarStatus("Gemini válido, mas o limite foi atingido agora.", "#fbbf24");
       return;
     }
 
     if (message.toLowerCase().includes("api key")) {
-      status.textContent = "Chave inválida. Crie outra no Google AI Studio.";
-      status.style.color = "#fca5a5";
+      mostrarStatus("Chave do Gemini inválida.", "#fca5a5");
       return;
     }
 
-    status.textContent = `Erro no teste: ${message || response.status}`;
-    status.style.color = "#fca5a5";
+    mostrarStatus(`Erro no Gemini: ${message || response.status}`, "#fca5a5");
   } catch (error) {
-    status.textContent = `Erro no teste: ${error.message}`;
-    status.style.color = "#fca5a5";
+    mostrarStatus(`Erro no Gemini: ${error.message}`, "#fca5a5");
   }
 });
+
+document.getElementById("testGroq").addEventListener("click", async () => {
+  const key = normalizarChave(groqInput.value);
+
+  if (!key) {
+    mostrarStatus("Cole uma chave da Groq antes de testar.", "#fca5a5");
+    return;
+  }
+
+  mostrarStatus("Testando Groq...", "#bfdbfe");
+
+  try {
+    const response = await fetch("https://api.groq.com/openai/v1/models", {
+      headers: {
+        "Authorization": `Bearer ${key}`
+      }
+    });
+
+    const data = await response.json();
+    const message = data.error?.message || "";
+
+    if (response.ok) {
+      mostrarStatus(`Groq válida: ${mascararChave(key)}`, "#86efac");
+      return;
+    }
+
+    if (response.status === 429) {
+      mostrarStatus("Groq válida, mas o limite foi atingido agora.", "#fbbf24");
+      return;
+    }
+
+    if (response.status === 401 || response.status === 403) {
+      mostrarStatus("Chave da Groq inválida.", "#fca5a5");
+      return;
+    }
+
+    mostrarStatus(`Erro na Groq: ${message || response.status}`, "#fca5a5");
+  } catch (error) {
+    mostrarStatus(`Erro na Groq: ${error.message}`, "#fca5a5");
+  }
+});
+
+function atualizarStatusSalvo(geminiKey, groqKey, prefix = "") {
+  const partes = [];
+
+  if (geminiKey) partes.push(`Gemini: ${mascararChave(geminiKey)}`);
+  if (groqKey) partes.push(`Groq: ${mascararChave(groqKey)}`);
+
+  mostrarStatus(
+    `${prefix ? `${prefix} ` : ""}${partes.length ? partes.join(" | ") : "Nenhuma chave salva."}`,
+    partes.length ? "#86efac" : "#fca5a5"
+  );
+}
+
+function mostrarStatus(texto, cor) {
+  status.textContent = texto;
+  status.style.color = cor;
+}
 
 function normalizarChave(key) {
   return String(key).replace(/\s/g, "");
