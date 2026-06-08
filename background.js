@@ -6,41 +6,48 @@ const GEMINI_MODELS = [
 const GROQ_MODEL = "llama-3.1-8b-instant";
 
 const MODES = {
-  explain_code: {
-    title: "Responder código",
-    loading: "Gerando resposta...",
-    heading: "Resposta"
-  },
-  solve_exercise: {
+  solve_question: {
     title: "Responder questão",
     loading: "Gerando resposta...",
     heading: "Resposta"
   },
-  explain_error: {
-    title: "Responder erro",
+  correct_option: {
+    title: "Alternativa correta",
+    loading: "Gerando resposta...",
+    heading: "Alternativa"
+  },
+  direct_answer: {
+    title: "Resposta direta",
     loading: "Gerando resposta...",
     heading: "Resposta"
   },
-  improve_code: {
-    title: "Gerar código melhorado",
-    loading: "Gerando código...",
+  final_result: {
+    title: "Resultado final",
+    loading: "Gerando resposta...",
     heading: "Resposta"
+  },
+  fix_or_improve: {
+    title: "Corrigir/melhorar",
+    loading: "Gerando correção...",
+    heading: "Correção"
   }
 };
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: "codementor-root",
-    title: "CodeMentor AI",
-    contexts: ["selection"]
-  });
-
-  Object.entries(MODES).forEach(([id, mode]) => {
+  chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
-      id,
-      parentId: "codementor-root",
-      title: mode.title,
+      id: "codementor-root",
+      title: "EstudoMentor AI",
       contexts: ["selection"]
+    });
+
+    Object.entries(MODES).forEach(([id, mode]) => {
+      chrome.contextMenus.create({
+        id,
+        parentId: "codementor-root",
+        title: mode.title,
+        contexts: ["selection"]
+      });
     });
   });
 });
@@ -285,7 +292,7 @@ function criarMensagemErro(error) {
   }
 
   if (error.message === "Chave do Gemini não encontrada.") {
-    return "Chave do Gemini não encontrada.\n\nClique no ícone da extensão CodeMentor AI e salve sua chave para começar.";
+    return "Chave do Gemini não encontrada.\n\nClique no ícone da extensão EstudoMentor AI e salve sua chave para começar.";
   }
 
   if (ehErroDeQuota(error)) {
@@ -332,60 +339,70 @@ function ehErroDeChaveInvalida(error) {
 
 function criarPrompt(selection, mode) {
   const regraRespostaDireta = `
-Você é o CodeMentor AI.
+Você é o EstudoMentor AI, um assistente de estudos para provas, exercícios, formulários e questões de várias matérias.
 Responda em português do Brasil.
 
 REGRA PRINCIPAL:
 - Dê apenas a resposta final.
 - Não explique.
 - Não mostre passo a passo.
+- Não mostre cálculo.
+- Não justifique.
 - Não use introduções como "A resposta é".
 - Não use comentários desnecessários.
-- Se for questão objetiva com alternativas, responda apenas a alternativa correta e, se útil, uma frase curta com o resultado.
+- Se for questão objetiva com alternativas, responda apenas a alternativa correta.
+- Se for uma questão de matemática, física, química, lógica ou estatística, calcule com cuidado antes de responder.
 - Se o enunciado pedir para criar, escrever, implementar ou completar um programa, responda apenas com o código completo.
 - Se o texto selecionado já trouxer uma pergunta e alternativas, use as alternativas para escolher a resposta.
 - Se não houver informação suficiente para responder, escreva apenas: "Informação insuficiente."
 `;
 
   const prompts = {
-    explain_code: `
-${regraRespostaDireta}
-Tarefa: responder diretamente sobre o código selecionado.
-Se for pedido o resultado/saída, retorne apenas a saída.
-Se for pedido para completar ou corrigir, retorne apenas o código final.
-Se for uma pergunta conceitual, retorne apenas a resposta curta.
-
-Texto selecionado:
-${selection}
-`,
-    solve_exercise: `
+    solve_question: `
 ${regraRespostaDireta}
 Tarefa: resolver a questão selecionada.
 Se for objetiva, retorne apenas a alternativa correta.
-Se pedir um programa, retorne apenas o código completo.
 Se pedir uma resposta numérica/textual, retorne apenas essa resposta.
+Se pedir um programa, retorne apenas o código completo.
 
 Questão:
 ${selection}
 `,
-    explain_error: `
+    correct_option: `
 ${regraRespostaDireta}
-Tarefa: corrigir o erro selecionado.
-Retorne apenas o comando, linha ou código corrigido mais provável.
-Se não for possível corrigir sem mais contexto, escreva apenas: "Informação insuficiente."
+Tarefa: identificar a alternativa correta.
+Retorne apenas a letra e/ou o texto da alternativa correta.
+Não explique.
 
-Erro:
+Questão:
 ${selection}
 `,
-    improve_code: `
+    direct_answer: `
 ${regraRespostaDireta}
-Tarefa: melhorar/refatorar o código selecionado.
-Retorne apenas o código melhorado, sem explicação.
+Tarefa: responder diretamente.
+Retorne somente a resposta final.
 
-Código:
+Questão:
+${selection}
+`,
+    final_result: `
+${regraRespostaDireta}
+Tarefa: resolver e retornar somente o resultado final.
+Faça qualquer raciocínio internamente, mas não mostre o cálculo nem a explicação.
+
+Questão:
+${selection}
+`,
+    fix_or_improve: `
+${regraRespostaDireta}
+Tarefa: corrigir ou melhorar o texto, resposta, cálculo, comando ou código selecionado.
+Retorne apenas a versão corrigida ou melhorada.
+Se for código, retorne apenas o código final.
+
+Texto:
 ${selection}
 `
   };
 
-  return prompts[mode] || prompts.solve_exercise;
+  return prompts[mode] || prompts.solve_question;
 }

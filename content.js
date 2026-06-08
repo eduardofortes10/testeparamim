@@ -47,7 +47,7 @@ function criarPainel({ title, heading, selection, answer, loading }) {
   painel.innerHTML = `
     <div class="cm-header">
       <div>
-        <strong>CodeMentor AI</strong>
+        <strong>EstudoMentor AI</strong>
         <span>${escapeHTML(title || "Resposta")}</span>
       </div>
       <div class="cm-window-actions">
