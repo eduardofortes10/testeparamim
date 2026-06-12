@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "EstudoMentor AI",
-  "version": "1.1",
+  "version": "1.2",
   "description": "Assistente de estudos para resolver questões, exercícios, alternativas, cálculos, códigos e correções curtas.",
   "permissions": ["contextMenus", "activeTab", "storage", "scripting"],
   "host_permissions": [
@@ -11,15 +11,20 @@
   "background": {
     "service_worker": "background.js"
   },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "action": {
     "default_title": "EstudoMentor AI",
-    "default_popup": "popup.html"
-  },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": ["style.css"]
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
     }
-  ]
+  }
 }

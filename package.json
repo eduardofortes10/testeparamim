@@ -1,0 +1,12 @@
+{
+  "name": "estudomentor-ai",
+  "version": "1.2.0",
+  "private": true,
+  "description": "Extensão Chrome do EstudoMentor AI.",
+  "scripts": {
+    "check": "node --check background.js && node --check popup.js && node --check content.js && node -e \"JSON.parse(require('fs').readFileSync('manifest.json','utf8'))\""
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

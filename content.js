@@ -27,7 +27,7 @@ chrome.runtime.onMessage.addListener((message) => {
   }
 });
 
-function criarPainel({ title, heading, selection, answer, loading }) {
+async function criarPainel({ title, heading, selection, answer, loading }) {
   let painel = document.getElementById("codementor-panel");
 
   if (!painel) {
@@ -36,6 +36,9 @@ function criarPainel({ title, heading, selection, answer, loading }) {
     document.body.appendChild(painel);
   }
 
+  const theme = await obterTemaPainel();
+  painel.classList.remove("cm-theme-light", "cm-theme-dark", "cm-theme-emerald", "cm-theme-graphite");
+  painel.classList.add(`cm-theme-${theme}`);
   painel.classList.toggle("is-minimized", painelMinimizado);
 
   if (painelPosicao) {
@@ -81,7 +84,6 @@ function criarPainel({ title, heading, selection, answer, loading }) {
   };
 
   ativarArraste(painel);
-
 }
 
 function ativarArraste(painel) {
@@ -178,4 +180,15 @@ function escapeHTML(text) {
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;");
+}
+
+function obterTemaPainel() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(["panelTheme"], ({ panelTheme }) => {
+      const theme = ["light", "dark", "emerald", "graphite"].includes(panelTheme)
+        ? panelTheme
+        : "light";
+      resolve(theme);
+    });
+  });
 }

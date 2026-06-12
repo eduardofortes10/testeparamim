@@ -1,16 +1,32 @@
 const geminiInput = document.getElementById("geminiKey");
 const groqInput = document.getElementById("groqKey");
 const status = document.getElementById("status");
+const themeInputs = Array.from(document.querySelectorAll('input[name="panelTheme"]'));
 
-chrome.storage.local.get(["geminiKey", "groqKey"], ({ geminiKey, groqKey }) => {
+chrome.storage.local.get(["geminiKey", "groqKey", "panelTheme"], ({ geminiKey, groqKey, panelTheme }) => {
   geminiInput.value = geminiKey || "";
   groqInput.value = groqKey || "";
+  selecionarTema(panelTheme || "light");
   atualizarStatusSalvo(geminiKey, groqKey);
+});
+
+themeInputs.forEach((input) => {
+  input.addEventListener("change", async () => {
+    if (!input.checked) return;
+
+    await chrome.storage.local.set({ panelTheme: input.value });
+    mostrarStatus(`Tema da janela salvo: ${nomeTema(input.value)}.`, "#86efac");
+  });
 });
 
 document.getElementById("save").addEventListener("click", async () => {
   const geminiKey = normalizarChave(geminiInput.value);
   const groqKey = normalizarChave(groqInput.value);
+
+  if (!geminiKey && !groqKey) {
+    mostrarStatus("Informe uma chave do Gemini ou da Groq.", "#fca5a5");
+    return;
+  }
 
   await chrome.storage.local.set({
     geminiKey,
@@ -24,8 +40,7 @@ document.getElementById("clear").addEventListener("click", async () => {
   await chrome.storage.local.remove(["geminiKey", "groqKey"]);
   geminiInput.value = "";
   groqInput.value = "";
-  status.textContent = "Chaves removidas.";
-  status.style.color = "#fca5a5";
+  mostrarStatus("Chaves removidas.", "#fca5a5");
 });
 
 document.getElementById("testGemini").addEventListener("click", async () => {
@@ -42,8 +57,7 @@ document.getElementById("testGemini").addEventListener("click", async () => {
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`
     );
-
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
     const message = data.error?.message || "";
     const apiStatus = data.error?.status || "";
 
@@ -84,8 +98,7 @@ document.getElementById("testGroq").addEventListener("click", async () => {
         "Authorization": `Bearer ${key}`
       }
     });
-
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
     const message = data.error?.message || "";
 
     if (response.ok) {
@@ -126,8 +139,8 @@ function mostrarStatus(texto, cor) {
   status.style.color = cor;
 }
 
-function normalizarChave(key) {
-  return String(key).replace(/\s/g, "");
+function normalizarChave(value) {
+  return String(value || "").replace(/\s/g, "");
 }
 
 function mascararChave(key) {
@@ -135,4 +148,22 @@ function mascararChave(key) {
   if (key.length <= 10) return "********";
 
   return `${key.slice(0, 6)}...${key.slice(-4)}`;
+}
+
+function selecionarTema(theme) {
+  const value = ["light", "dark", "emerald", "graphite"].includes(theme) ? theme : "light";
+  const input = themeInputs.find((item) => item.value === value);
+
+  if (input) input.checked = true;
+}
+
+function nomeTema(theme) {
+  const nomes = {
+    light: "Claro",
+    dark: "Escuro",
+    emerald: "Verde",
+    graphite: "Grafite"
+  };
+
+  return nomes[theme] || nomes.light;
 }

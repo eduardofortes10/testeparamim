@@ -1,3 +1,4 @@
+const MAX_SELECTION_LENGTH = 8000;
 const GEMINI_MODELS = [
   "gemini-2.5-flash",
   "gemini-2.0-flash",
@@ -10,33 +11,13 @@ const MODES = {
     title: "Responder questão",
     loading: "Gerando resposta...",
     heading: "Resposta"
-  },
-  correct_option: {
-    title: "Alternativa correta",
-    loading: "Gerando resposta...",
-    heading: "Alternativa"
-  },
-  direct_answer: {
-    title: "Resposta direta",
-    loading: "Gerando resposta...",
-    heading: "Resposta"
-  },
-  final_result: {
-    title: "Resultado final",
-    loading: "Gerando resposta...",
-    heading: "Resposta"
-  },
-  fix_or_improve: {
-    title: "Corrigir/melhorar",
-    loading: "Gerando correção...",
-    heading: "Correção"
   }
 };
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
-      id: "codementor-root",
+      id: "estudomentor-root",
       title: "EstudoMentor AI",
       contexts: ["selection"]
     });
@@ -44,7 +25,7 @@ chrome.runtime.onInstalled.addListener(() => {
     Object.entries(MODES).forEach(([id, mode]) => {
       chrome.contextMenus.create({
         id,
-        parentId: "codementor-root",
+        parentId: "estudomentor-root",
         title: mode.title,
         contexts: ["selection"]
       });
@@ -56,7 +37,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const mode = MODES[info.menuItemId];
   if (!mode) return;
 
-  const selection = info.selectionText?.trim();
+  const selection = normalizarSelecao(info.selectionText);
   if (!selection || !tab?.id) return;
 
   await enviarParaAba(tab.id, {
@@ -94,9 +75,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type !== "RUN_MODE") return false;
 
-  gerarResposta(message.selection, message.mode)
+  const selection = normalizarSelecao(message.selection);
+  const mode = validarModo(message.mode);
+
+  gerarResposta(selection, mode)
     .then((answer) => sendResponse({ ok: true, answer }))
-    .catch((error) => sendResponse({ ok: false, error: error.message }));
+    .catch((error) => sendResponse({ ok: false, error: criarMensagemErro(error) }));
 
   return true;
 });
@@ -127,103 +111,95 @@ async function injetarPainel(tabId) {
 }
 
 async function gerarResposta(selection, mode) {
-  const storage = await chrome.storage.local.get(["geminiKey", "groqKey"]);
-  const geminiKey = String(storage.geminiKey || "").replace(/\s/g, "");
-  const groqKey = String(storage.groqKey || "").replace(/\s/g, "");
+  const safeSelection = normalizarSelecao(selection);
+  const safeMode = validarModo(mode);
 
-  if (!geminiKey && !groqKey) {
-    throw new Error("Nenhuma chave de API encontrada.");
+  if (!safeSelection) {
+    throw new Error("Seleção vazia.");
   }
 
-  const prompt = criarPrompt(selection, mode);
+  const config = await chrome.storage.local.get([
+    "geminiKey",
+    "groqKey"
+  ]);
+  const gemini = normalizarChave(config.geminiKey);
+  const groq = normalizarChave(config.groqKey);
 
-  if (geminiKey) {
+  if (!gemini && !groq) {
+    throw new Error("Nenhuma API configurada.");
+  }
+
+  const prompt = criarPrompt(safeSelection, safeMode);
+
+  if (gemini) {
     try {
-      return await gerarComFallback(geminiKey, prompt);
+      return await gerarComGemini(gemini, prompt);
     } catch (error) {
-      if (!groqKey) {
-        throw error;
-      }
-
-      console.warn("Gemini falhou. Tentando Groq como fallback.", error);
+      if (!groq) throw error;
+      console.warn("Gemini do usuário falhou. Tentando Groq do usuário.", error);
     }
   }
 
-  return chamarGroq(groqKey, prompt);
+  return gerarComGroq(groq, prompt);
 }
 
-async function gerarComFallback(geminiKey, prompt) {
+function normalizarSelecao(value) {
+  return String(value || "").trim().slice(0, MAX_SELECTION_LENGTH);
+}
+
+function validarModo(mode) {
+  return MODES[mode] ? mode : "solve_question";
+}
+
+function normalizarChave(value) {
+  return String(value || "").replace(/\s/g, "");
+}
+
+async function gerarComGemini(geminiKey, prompt) {
   let ultimoErro = null;
 
   for (const model of GEMINI_MODELS) {
     try {
-      return await chamarGemini(geminiKey, model, prompt);
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [{ text: prompt }]
+              }
+            ],
+            generationConfig: {
+              temperature: 0,
+              maxOutputTokens: 900
+            }
+          })
+        }
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        const error = new Error(data.error?.message || "Erro na API do Gemini");
+        error.httpStatus = response.status;
+        error.apiStatus = data.error?.status || "";
+        throw error;
+      }
+
+      return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "Não consegui gerar uma resposta.";
     } catch (error) {
       ultimoErro = error;
-
-      if (error.retryDelayMs && !error.message.includes("limit: 0")) {
-        await esperar(error.retryDelayMs);
-
-        try {
-          return await chamarGemini(geminiKey, model, prompt);
-        } catch (retryError) {
-          ultimoErro = retryError;
-        }
-      }
-
-      if (ehErroDeQuota(ultimoErro)) {
-        throw ultimoErro;
-      }
-
-      if (!podeTentarOutroModelo(ultimoErro)) {
-        throw ultimoErro;
-      }
     }
   }
 
-  throw new Error(
-    ultimoErro?.message ||
-    "Todos os modelos do Gemini estão indisponíveis no momento."
-  );
+  throw ultimoErro || new Error("Gemini indisponível.");
 }
 
-async function chamarGemini(geminiKey, model, prompt) {
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiKey)}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: prompt }]
-          }
-        ]
-      })
-    }
-  );
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    const message = data.error?.message || "Erro na API do Gemini";
-    const status = data.error?.status || "";
-    const error = new Error(`${message} [${response.status} ${status}]`);
-    error.httpStatus = response.status;
-    error.apiStatus = status;
-    error.retryDelayMs = obterRetryDelayMs(data, message);
-    throw error;
-  }
-
-  return (
-    data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
-    "Não consegui gerar uma resposta."
-  );
-}
-
-async function chamarGroq(groqKey, prompt) {
+async function gerarComGroq(groqKey, prompt) {
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -239,102 +215,20 @@ async function chamarGroq(groqKey, prompt) {
         }
       ],
       temperature: 0,
-      max_tokens: 1200
+      max_tokens: 900
     })
   });
 
-  const data = await response.json();
+  const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const message = data.error?.message || "Erro na API da Groq";
-    const error = new Error(`${message} [Groq ${response.status}]`);
+    const error = new Error(data.error?.message || "Erro na API da Groq");
     error.httpStatus = response.status;
     error.provider = "groq";
     throw error;
   }
 
-  return (
-    data.choices?.[0]?.message?.content?.trim() ||
-    "Não consegui gerar uma resposta."
-  );
-}
-
-function obterRetryDelayMs(data, message) {
-  const retryInfo = data.error?.details?.find((detail) => detail.retryDelay);
-  const retryDelay = retryInfo?.retryDelay;
-
-  if (retryDelay) {
-    return Math.ceil(Number.parseFloat(retryDelay) * 1000);
-  }
-
-  const match = message.match(/retry in ([\d.]+)s/i);
-  return match ? Math.ceil(Number.parseFloat(match[1]) * 1000) : 0;
-}
-
-function esperar(ms) {
-  return new Promise((resolve) => setTimeout(resolve, Math.min(ms, 12000)));
-}
-
-function podeTentarOutroModelo(error) {
-  const message = error.message.toLowerCase();
-
-  return (
-    message.includes("high demand") ||
-    message.includes("overloaded") ||
-    message.includes("unavailable") ||
-    message.includes("503")
-  );
-}
-
-function criarMensagemErro(error) {
-  if (error.message === "Nenhuma chave de API encontrada.") {
-    return "Nenhuma chave encontrada. Abra o ícone da extensão e salve uma chave do Gemini ou da Groq.";
-  }
-
-  if (error.message === "Chave do Gemini não encontrada.") {
-    return "Chave do Gemini não encontrada.\n\nClique no ícone da extensão EstudoMentor AI e salve sua chave para começar.";
-  }
-
-  if (ehErroDeQuota(error)) {
-    return error.provider === "groq"
-      ? "Limite gratuito da Groq atingido. Aguarde um pouco ou use Gemini como alternativa."
-      : "Limite gratuito do Gemini atingido. Aguarde alguns segundos ou use a Groq como alternativa.";
-  }
-
-  if (ehErroDeChaveInvalida(error)) {
-    return error.provider === "groq"
-      ? "Chave da Groq inválida. Abra o ícone da extensão e cole uma chave válida da Groq."
-      : "Chave do Gemini inválida ou não encontrada. Abra o ícone da extensão, limpe a chave salva e cole uma chave nova válida.";
-  }
-
-  return `Não foi possível gerar a resposta.\n\n${error.message}`;
-}
-
-function ehErroDeQuota(error) {
-  const message = error.message.toLowerCase();
-
-  return (
-    error.httpStatus === 429 ||
-    error.apiStatus === "RESOURCE_EXHAUSTED" ||
-    message.includes("quota exceeded") ||
-    message.includes("rate-limit") ||
-    message.includes("resource_exhausted")
-  );
-}
-
-function ehErroDeChaveInvalida(error) {
-  const message = error.message.toLowerCase();
-
-  return (
-    (error.httpStatus === 400 || error.httpStatus === 401 || error.httpStatus === 403) &&
-    (
-      message.includes("api key not found") ||
-      message.includes("valid api key") ||
-      message.includes("invalid_argument") ||
-      message.includes("invalid api key") ||
-      message.includes("unauthorized")
-    )
-  );
+  return data.choices?.[0]?.message?.content?.trim() || "Não consegui gerar uma resposta.";
 }
 
 function criarPrompt(selection, mode) {
@@ -372,7 +266,6 @@ ${selection}
 ${regraRespostaDireta}
 Tarefa: identificar a alternativa correta.
 Retorne apenas a letra e/ou o texto da alternativa correta.
-Não explique.
 
 Questão:
 ${selection}
@@ -405,4 +298,30 @@ ${selection}
   };
 
   return prompts[mode] || prompts.solve_question;
+}
+
+function criarMensagemErro(error) {
+  if (error.message === "Nenhuma API configurada.") {
+    return "Nenhuma API configurada. Abra o ícone da extensão e informe uma chave do Gemini ou da Groq.";
+  }
+
+  if (error.message === "Seleção vazia.") {
+    return "Selecione o texto da questão antes de usar a extensão.";
+  }
+
+  if (error.httpStatus === 401 || error.httpStatus === 403) {
+    return error.provider === "groq"
+      ? "Chave da Groq inválida ou sem permissão."
+      : "Chave de API inválida, expirada ou sem permissão.";
+  }
+
+  if (error.httpStatus === 413) {
+    return "O texto selecionado é muito grande. Selecione apenas a questão.";
+  }
+
+  if (error.httpStatus === 429) {
+    return "Limite de uso atingido. Tente novamente mais tarde.";
+  }
+
+  return `Não foi possível gerar a resposta.\n\n${error.message}`;
 }

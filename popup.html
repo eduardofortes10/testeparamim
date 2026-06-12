@@ -5,63 +5,146 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>EstudoMentor AI</title>
     <style>
+      :root {
+        color-scheme: dark;
+        --bg: #080d1a;
+        --panel: rgba(15, 23, 42, 0.72);
+        --panel-soft: rgba(15, 23, 42, 0.56);
+        --line: rgba(148, 163, 184, 0.22);
+        --text: #f8fafc;
+        --muted: #b8c4d8;
+        --accent: #60a5fa;
+        --accent-strong: #2f6fed;
+        --danger: #fca5a5;
+        --success: #86efac;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
       body {
-        width: 360px;
+        width: 374px;
         margin: 0;
-        background: #0f172a;
-        color: #e5e7eb;
-        font-family: Arial, sans-serif;
+        background:
+          radial-gradient(circle at 12% -10%, rgba(96, 165, 250, 0.34), transparent 32%),
+          radial-gradient(circle at 110% 4%, rgba(20, 184, 166, 0.22), transparent 30%),
+          linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.98)),
+          var(--bg);
+        color: var(--text);
+        font-family: Inter, Arial, sans-serif;
       }
 
       main {
-        padding: 18px;
+        padding: 16px;
+      }
+
+      .hero {
+        position: relative;
+        display: grid;
+        grid-template-columns: 44px 1fr;
+        gap: 11px;
+        align-items: center;
+        padding: 4px 2px 14px;
+      }
+
+      .brand-mark {
+        width: 44px;
+        height: 44px;
+        border-radius: 8px;
+        object-fit: cover;
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.24);
       }
 
       h1 {
         margin: 0 0 6px;
-        color: #f8fafc;
-        font-size: 20px;
+        color: var(--text);
+        font-size: 22px;
+        line-height: 1.15;
+        letter-spacing: 0;
       }
 
       p {
-        margin: 0 0 16px;
-        color: #cbd5e1;
-        line-height: 1.5;
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.42;
       }
 
-      label {
+      .config-card {
+        padding: 13px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background:
+          linear-gradient(180deg, rgba(15, 23, 42, 0.76), rgba(15, 23, 42, 0.46));
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      }
+
+      .field {
+        margin-top: 12px;
+      }
+
+      .field:first-child {
+        margin-top: 0;
+      }
+
+      label,
+      .section-title {
         display: block;
-        margin: 14px 0 8px;
-        color: #bfdbfe;
-        font-size: 13px;
-        font-weight: 700;
+        margin: 0 0 7px;
+        color: #d9e8ff;
+        font-size: 12px;
+        font-weight: 800;
       }
 
       input {
-        box-sizing: border-box;
         width: 100%;
-        padding: 11px;
-        border: 1px solid #334155;
-        border-radius: 6px;
-        background: #020617;
-        color: #f8fafc;
+        height: 40px;
+        padding: 0 12px;
+        border: 1px solid rgba(100, 116, 139, 0.52);
+        border-radius: 8px;
+        background: rgba(2, 6, 23, 0.64);
+        color: var(--text);
         font-size: 14px;
+        outline: none;
+        transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+      }
+
+      input:focus {
+        border-color: rgba(96, 165, 250, 0.92);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        background: rgba(2, 6, 23, 0.88);
       }
 
       button {
         width: 100%;
+        min-height: 40px;
         margin-top: 10px;
         padding: 10px 12px;
-        border: 0;
-        border-radius: 6px;
-        background: #2563eb;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        background: linear-gradient(180deg, #3b82f6, var(--accent-strong));
         color: #ffffff;
-        font-weight: 700;
+        font-size: 13px;
+        font-weight: 800;
         cursor: pointer;
+        box-shadow: 0 10px 22px rgba(37, 99, 235, 0.22);
+        transition: transform 140ms ease, filter 140ms ease, box-shadow 140ms ease;
+      }
+
+      button:hover {
+        filter: brightness(1.08);
+        transform: translateY(-1px);
       }
 
       .secondary {
-        background: #334155;
+        background: rgba(51, 65, 85, 0.86);
+        box-shadow: none;
+      }
+
+      .secondary:hover {
+        box-shadow: 0 8px 18px rgba(2, 6, 23, 0.18);
       }
 
       .row {
@@ -72,57 +155,152 @@
 
       #status {
         min-height: 18px;
-        margin-top: 10px;
-        color: #86efac;
-        font-size: 13px;
+        margin: 11px 0 0;
+        color: var(--success);
+        font-size: 12px;
         line-height: 1.4;
       }
 
-      .modes {
+      .theme-panel {
+        margin-top: 13px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background:
+          linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.48));
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      }
+
+      .section-title {
+        margin-bottom: 9px;
+      }
+
+      .theme-options {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 8px;
-        margin-top: 16px;
       }
 
-      .modes span {
-        padding: 8px;
-        border: 1px solid #334155;
-        border-radius: 6px;
-        background: #111827;
+      .theme-option {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        min-height: 42px;
+        padding: 9px 10px;
+        border: 1px solid rgba(100, 116, 139, 0.42);
+        border-radius: 8px;
+        background: rgba(2, 6, 23, 0.32);
         color: #dbeafe;
+        cursor: pointer;
+        transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+      }
+
+      .theme-option input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+      }
+
+      .theme-option:has(input:checked) {
+        border-color: rgba(96, 165, 250, 0.95);
+        background: rgba(37, 99, 235, 0.2);
+        box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.18);
+      }
+
+      .theme-option:hover {
+        transform: translateY(-1px);
+        border-color: rgba(148, 163, 184, 0.72);
+      }
+
+      .swatch {
+        width: 22px;
+        height: 22px;
+        flex: 0 0 22px;
+        border: 1px solid rgba(255, 255, 255, 0.24);
+        border-radius: 50%;
+      }
+
+      .swatch-light {
+        background: linear-gradient(135deg, #f8fafc, #dbeafe);
+      }
+
+      .swatch-dark {
+        background: linear-gradient(135deg, #020617, #334155);
+      }
+
+      .swatch-emerald {
+        background: linear-gradient(135deg, #052e2b, #10b981);
+      }
+
+      .swatch-graphite {
+        background: linear-gradient(135deg, #18181b, #71717a);
+      }
+
+      .theme-name {
         font-size: 12px;
+        font-weight: 800;
       }
     </style>
   </head>
   <body>
     <main>
-      <h1>EstudoMentor AI</h1>
-      <p>Gemini responde primeiro. Se falhar, Groq entra como reserva.</p>
+      <section class="hero">
+        <img class="brand-mark" src="icons/icon128.png" alt="">
+        <div>
+          <h1>EstudoMentor AI</h1>
+          <p>Configure suas APIs e escolha o visual da janela de resposta.</p>
+        </div>
+      </section>
 
-      <label for="geminiKey">Chave do Gemini</label>
-      <input id="geminiKey" type="password" autocomplete="off" placeholder="AIza...">
+      <section class="config-card">
+        <div class="field">
+          <label for="geminiKey">Chave do Gemini</label>
+          <input id="geminiKey" type="password" autocomplete="off" placeholder="AIza...">
+        </div>
 
-      <label for="groqKey">Chave da Groq</label>
-      <input id="groqKey" type="password" autocomplete="off" placeholder="gsk_...">
+        <div class="field">
+          <label for="groqKey">Chave da Groq</label>
+          <input id="groqKey" type="password" autocomplete="off" placeholder="gsk_...">
+        </div>
 
-      <button id="save" type="button">Salvar chaves</button>
+        <button id="save" type="button">Salvar chaves</button>
 
-      <div class="row">
-        <button id="testGemini" type="button" class="secondary">Testar Gemini</button>
-        <button id="testGroq" type="button" class="secondary">Testar Groq</button>
-      </div>
+        <div class="row">
+          <button id="testGemini" type="button" class="secondary">Testar Gemini</button>
+          <button id="testGroq" type="button" class="secondary">Testar Groq</button>
+        </div>
 
-      <button id="clear" type="button" class="secondary">Limpar chaves salvas</button>
-      <div id="status" role="status"></div>
+        <button id="clear" type="button" class="secondary">Limpar chaves salvas</button>
+        <div id="status" role="status"></div>
+      </section>
 
-      <div class="modes" aria-label="Modos disponíveis">
-        <span>Responder questão</span>
-        <span>Alternativa correta</span>
-        <span>Resposta direta</span>
-        <span>Resultado final</span>
-        <span>Corrigir/melhorar</span>
-      </div>
+      <section class="theme-panel" aria-labelledby="themeTitle">
+        <span id="themeTitle" class="section-title">Tema da janela</span>
+        <div class="theme-options">
+          <label class="theme-option">
+            <input type="radio" name="panelTheme" value="light">
+            <span class="swatch swatch-light"></span>
+            <span class="theme-name">Claro</span>
+          </label>
+          <label class="theme-option">
+            <input type="radio" name="panelTheme" value="dark">
+            <span class="swatch swatch-dark"></span>
+            <span class="theme-name">Escuro</span>
+          </label>
+          <label class="theme-option">
+            <input type="radio" name="panelTheme" value="emerald">
+            <span class="swatch swatch-emerald"></span>
+            <span class="theme-name">Verde</span>
+          </label>
+          <label class="theme-option">
+            <input type="radio" name="panelTheme" value="graphite">
+            <span class="swatch swatch-graphite"></span>
+            <span class="theme-name">Grafite</span>
+          </label>
+        </div>
+      </section>
     </main>
 
     <script src="popup.js"></script>
