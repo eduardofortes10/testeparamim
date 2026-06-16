@@ -1,4 +1,4 @@
-# EstudoMentor AI
+# EstudoMentor IA
 
 Extensão Chrome para resolver questões usando Gemini e/ou Groq com as chaves de API do próprio usuário.
 
@@ -11,7 +11,7 @@ Extensão Chrome para resolver questões usando Gemini e/ou Groq com as chaves d
 5. Cole a chave do Gemini e/ou da Groq.
 6. Clique em `Salvar chaves`.
 7. Se quiser, use `Testar Gemini` e `Testar Groq`.
-8. Em qualquer página, selecione a questão, clique com o botão direito e escolha `EstudoMentor AI`.
+8. Em qualquer página, selecione a questão, clique com o botão direito e escolha `EstudoMentor IA`.
 
 ## Comportamento
 
@@ -23,3 +23,15 @@ Extensão Chrome para resolver questões usando Gemini e/ou Groq com as chaves d
 ## Compra e validação
 
 A validação de compra/plano será feita depois, em um site ou servidor separado. Por enquanto, o programa está focado em funcionar bem com as APIs informadas pelo usuário.
+
+## Landing page
+
+A landing page fica em `index.html`, com estilos em `site.css` e comportamento leve em `site.js`.
+
+Para subir na Vercel:
+
+1. Envie o projeto para o GitHub.
+2. Na Vercel, clique em `Add New Project`.
+3. Importe este repositório.
+4. Use as configurações padrão de projeto estático.
+5. Publique.

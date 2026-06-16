@@ -50,7 +50,7 @@ async function criarPainel({ title, heading, selection, answer, loading }) {
   painel.innerHTML = `
     <div class="cm-header">
       <div>
-        <strong>EstudoMentor AI</strong>
+        <strong>EstudoMentor IA</strong>
         <span>${escapeHTML(title || "Resposta")}</span>
       </div>
       <div class="cm-window-actions">

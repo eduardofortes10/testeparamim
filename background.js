@@ -18,7 +18,7 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
       id: "estudomentor-root",
-      title: "EstudoMentor AI",
+      title: "EstudoMentor IA",
       contexts: ["selection"]
     });
 
@@ -233,7 +233,7 @@ async function gerarComGroq(groqKey, prompt) {
 
 function criarPrompt(selection, mode) {
   const regraRespostaDireta = `
-Você é o EstudoMentor AI, um assistente de estudos para provas, exercícios, formulários e questões de várias matérias.
+Você é o EstudoMentor IA, um assistente de estudos para provas, exercícios, formulários e questões de várias matérias.
 Responda em português do Brasil.
 
 REGRA PRINCIPAL:

@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "EstudoMentor AI",
+  "name": "EstudoMentor IA",
   "version": "1.2",
   "description": "Assistente de estudos para resolver questões, exercícios, alternativas, cálculos, códigos e correções curtas.",
   "permissions": ["contextMenus", "activeTab", "storage", "scripting"],
@@ -18,7 +18,7 @@
     "128": "icons/icon128.png"
   },
   "action": {
-    "default_title": "EstudoMentor AI",
+    "default_title": "EstudoMentor IA",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",

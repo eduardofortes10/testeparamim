@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="EstudoMentor AI é uma extensão Chrome para responder questões online usando Gemini ou Groq com a API do próprio usuário.">
+    <title>EstudoMentor AI | Responda questões direto da página</title>
+    <link rel="icon" href="icons/icon48.png">
+    <link rel="stylesheet" href="site.css">
+  </head>
+  <body>
+    <header class="site-header" aria-label="Navegação principal">
+      <a class="brand" href="#top" aria-label="EstudoMentor AI">
+        <img src="icons/icon32.png" alt="">
+        <span>EstudoMentor AI</span>
+      </a>
+
+      <nav class="nav-links" aria-label="Seções da página">
+        <a href="#top">Home</a>
+        <a href="#como-funciona">Como funciona</a>
+        <a href="#recursos">Recursos</a>
+        <a href="#planos">Planos</a>
+      </nav>
+
+      <div class="nav-actions">
+        <a class="login-link" href="#planos">Login</a>
+        <a class="signin-link" href="#planos">Começar</a>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow">Extensão Chrome com IA</p>
+          <h1 id="hero-title">
+            Resolva questões online em segundos, de qualquer página.
+          </h1>
+          <p class="lead">
+            Selecione uma pergunta, clique com o botão direito e receba apenas a resposta final em uma janela discreta. Use Gemini ou Groq com a API do próprio usuário.
+          </p>
+
+          <div class="hero-actions">
+            <a class="primary-button" href="#planos">Começar agora</a>
+            <a class="secondary-button" href="#como-funciona">Como funciona</a>
+          </div>
+
+          <div class="stats" aria-label="Destaques do produto">
+            <div>
+              <strong class="yellow">1 clique</strong>
+              <span>para responder questões selecionadas</span>
+            </div>
+            <div>
+              <strong class="blue">2 APIs</strong>
+              <span>Gemini e Groq com fallback</span>
+            </div>
+            <div>
+              <strong class="orange">4 temas</strong>
+              <span>para a janela de resposta</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-art" aria-hidden="true">
+          <span class="shape shape-star"></span>
+          <span class="shape shape-purple"></span>
+          <span class="shape shape-red"></span>
+          <span class="shape shape-blue"></span>
+          <span class="shape shape-yellow"></span>
+          <img src="assets/hero-education.png" alt="">
+        </div>
+      </section>
+
+      <section id="como-funciona" class="section how-section">
+        <div class="section-heading">
+          <p class="eyebrow">Como funciona</p>
+          <h2>Uma rotina simples para estudar mais rápido.</h2>
+          <p>O EstudoMentor AI entra no fluxo que o usuário já conhece: selecionar texto, abrir menu e receber uma resposta direta.</p>
+        </div>
+
+        <div class="steps-grid">
+          <article>
+            <span>01</span>
+            <h3>Configure as APIs</h3>
+            <p>Cole a chave do Gemini e/ou da Groq no popup da extensão.</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3>Selecione a pergunta</h3>
+            <p>Marque o enunciado ou as alternativas em qualquer página.</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3>Receba a resposta</h3>
+            <p>A janela flutuante mostra somente a resposta final, sem enrolação.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="recursos" class="section feature-section">
+        <div class="feature-copy">
+          <p class="eyebrow">Recursos</p>
+          <h2>Feito para vender sem assumir o custo das APIs.</h2>
+          <p>O usuário coloca as próprias chaves Gemini/Groq. Você vende a experiência, o fluxo e a facilidade de uso da extensão.</p>
+        </div>
+
+        <div class="feature-list">
+          <article>
+            <h3>Resposta objetiva</h3>
+            <p>Prompt orientado para retornar apenas a resposta final.</p>
+          </article>
+          <article>
+            <h3>Fallback automático</h3>
+            <p>Se Gemini falhar e Groq estiver configurada, a extensão tenta Groq.</p>
+          </article>
+          <article>
+            <h3>Janela personalizada</h3>
+            <p>Temas claro, escuro, verde e grafite para o painel de resposta.</p>
+          </article>
+          <article>
+            <h3>Sem servidor obrigatório</h3>
+            <p>A versão atual funciona direto no navegador com as APIs do usuário.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="planos" class="section cta-section">
+        <div>
+          <p class="eyebrow">Planos</p>
+          <h2>Pronto para transformar em produto.</h2>
+          <p>Quando quiser, a próxima etapa é adicionar checkout, chave de ativação e uma área de clientes.</p>
+        </div>
+        <a class="primary-button" href="mailto:contato@seudominio.com?subject=Quero%20o%20EstudoMentor%20AI">Solicitar acesso</a>
+      </section>
+    </main>
+
+    <footer>
+      <a class="brand" href="#top">
+        <img src="icons/icon32.png" alt="">
+        <span>EstudoMentor AI</span>
+      </a>
+      <span>Extensão para estudos online com IA.</span>
+      <a href="PRIVACY.md">Privacidade</a>
+    </footer>
+
+    <script src="site.js"></script>
+  </body>
+</html>
